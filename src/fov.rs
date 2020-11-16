@@ -8,30 +8,61 @@ use crate::{
     log,
 };
 
-pub fn compute_fov((col, row): (usize, usize), map: &Map) -> Vec<(usize, usize)> {
-    static DIRECTIONS: [Direction; 4] = [Direction::North, Direction::East, Direction::South, Direction::West];
+pub fn compute_fov(origin: (usize, usize), map: &Map) -> Vec<(usize, usize)> {
+    static QUADRANTS: [Direction; 4] = [Direction::North, Direction::East, Direction::South, Direction::West];
     let mut revealed_tiles = Vec::new();
 
-    for &direction in DIRECTIONS.iter() {
-        let scanner = Scanner { 
-            direction, 
-            origin: (col, row),
-            start_slope: -1.0,
-            end_slope: 1.0,
-        };
-
-        revealed_tiles.extend(scanner.scan(map));
+    for &direction in &QUADRANTS {
+        let quadrant = Quadrant { direction, origin };
+        let mut first_row = Row { depth: 1, start_slope: -1.0, end_slope: 1.0 };
+        revealed_tiles.extend(scan(&mut first_row, &quadrant, map));
     }
-
     revealed_tiles
 }
 
+fn scan(row: &mut Row, quadrant: &Quadrant, map: &Map) -> Vec<(usize, usize)> {
+    let mut previous_tile: Option<(i64, i64)> = None;
+    let mut visible_tiles = Vec::new();
 
-fn slope((o_col, o_row): (usize, usize), (col, row): (usize, usize)) -> f64 {
-    (o_row as f64 - row as f64) / (o_col as f64 - col as f64)
+    for tile in row.tiles() {
+        let abs_tile = quadrant.transform(tile);
+        
+        if map[abs_tile] == TileType::Wall || map[abs_tile] == TileType::Floor {
+            visible_tiles.push(abs_tile);
+        }
+
+        if let Some(prev_tile) = previous_tile {
+            let prev_abs_tile = quadrant.transform(prev_tile);
+
+            if map[prev_abs_tile] == TileType::Wall && map[abs_tile] == TileType::Floor {
+                row.start_slope = slope(tile);
+            } else if map[prev_abs_tile] == TileType::Floor && map[abs_tile] == TileType::Wall {
+                let mut next_row = row.next();
+                next_row.end_slope = slope(tile);
+
+                visible_tiles.extend(scan(&mut next_row, &quadrant, map));
+            }
+        }
+
+        previous_tile = Some(tile)
+    }
+
+    if let Some(prev_tile) = previous_tile {
+        let prev_abs_tile = quadrant.transform(prev_tile);
+
+        if map[prev_abs_tile] == TileType::Floor {
+            visible_tiles.extend(scan(&mut row.next(), &quadrant, map));
+        }
+    }
+
+    visible_tiles
 }
 
-#[derive(Copy, Clone, Debug)]
+fn slope((col, row): (i64, i64)) -> f64 {
+    (2 * col - 1) as f64 / (2 * row) as f64
+}
+
+#[derive(Clone, Copy)]
 enum Direction {
     North,
     East,
@@ -39,108 +70,55 @@ enum Direction {
     West,
 }
 
-#[derive(Debug)]
-struct Scanner {
+pub struct Quadrant {
     direction: Direction,
     origin: (usize, usize),
+}
+
+impl Quadrant {
+    fn transform(&self, point: (i64, i64)) -> (usize, usize) {
+        let (col, row) = point;
+        let (o_col, o_row) = self.origin;
+
+        match self.direction {
+            Direction::North => {
+                ((o_col as i64 + col) as usize, (o_row as i64 - row) as usize)
+            }
+            Direction::East => {
+                ((o_col as i64 + row) as usize, (o_row as i64 + col) as usize)
+            }
+            Direction::South => {
+                ((o_col as i64 + col) as usize, (o_row as i64 + row) as usize)
+            }
+            Direction::West => {
+                ((o_col as i64 - row) as usize, (o_row as i64 + col) as usize)
+            }
+        }
+    }
+}
+
+struct Row {
+    depth: i64,
     start_slope: f64,
     end_slope: f64,
 }
 
-impl Scanner {
-    fn scan(&self, map: &Map) -> Vec<(usize, usize)> {
-        log(&format!("Scanning with parameters: {:?}", self));
-
-        let mut revealed_tiles = Vec::new();
-        let mut previous_tile: Option<(usize, usize)> = None;
-        
-        match self.direction {
-            North => {
-                for tile in self.row(self.origin.1 + 1) {
-                    if tile.1 > map.width || tile.0 > map.height { 
-                        log(&format!("Invalid tile at {:?}", tile));
-                        continue; 
-                    }
-
-                    if map[tile] == TileType::Wall || map[tile] == TileType::Floor {
-                        log(&format!("{:?}: {:?}", tile, map[tile]));
-                        revealed_tiles.push(tile);
-                    }
-
-                    if let Some(p_tile) = previous_tile {
-                        log(&format!("Examining previous tile: {:?}", p_tile));
-
-                        if map[p_tile] == TileType::Wall && map[tile] == TileType::Floor {
-                            let scanner = Scanner { 
-                                direction: self.direction, 
-                                origin: (tile.0, tile.1 + 1),
-                                start_slope: slope(self.origin, tile),
-                                end_slope: self.start_slope,
-                            };
-
-                            revealed_tiles.extend(scanner.scan(map));
-                        } else if map[p_tile] == TileType::Floor && map[tile] == TileType::Wall {
-                            let scanner = Scanner { 
-                                direction: self.direction, 
-                                origin: (tile.0, tile.1 + 1),
-                                start_slope: self.start_slope,
-                                end_slope: slope(self.origin, tile)
-                            };
-
-                            revealed_tiles.extend(scanner.scan(map));
-                        } else {
-                            log("No need to recurse");
-                        }
-                    } else {
-                        log("No previous tile to examine");
-                    }
-
-                    previous_tile = Some(tile);
-                }
-
-                if let Some(p_tile) = previous_tile {
-                    log(&format!("Last tile in previous row: {:?}", p_tile));
-
-                    if map[p_tile] == TileType::Floor {
-                        let scanner = Scanner { 
-                            direction: self.direction, 
-                            origin: (self.origin.0, self.origin.1 + 1),
-                            start_slope: self.start_slope,
-                            end_slope: self.end_slope,
-                        };
-                        scanner.scan(map); 
-                        revealed_tiles.extend(scanner.scan(map));
-                    }
-                } else {
-                    log("No tile left from previous row");
-                }
-            }
+impl Row {
+    fn next(&self) -> Row {
+        Row {
+            depth: self.depth + 1,
+            start_slope: self.start_slope,
+            end_slope: self.end_slope,
         }
-
-        revealed_tiles
     }
 
-    fn row(&self, row: usize) -> Vec<(usize, usize)> {
-        let depth = row - self.origin.1;
-        let min_col = self.origin.0 - f64::floor((depth as f64 * self.start_slope)) as usize - 1;
-        let max_col = self.origin.0 + f64::ceil((depth as f64 * self.end_slope)) as usize;
-
-        log(&format!("Sweeping row {} from {} to {}", row, min_col, max_col));
+    fn tiles(&self) -> Vec<(i64, i64)> {
+        let min_col = (self.depth as f64 * self.start_slope + 0.5).floor() as i64;
+        let max_col = (self.depth as f64 * self.end_slope - 0.5).ceil() as i64; 
 
         (min_col ..= max_col)
-            .map(|col| (row, col))
-            .collect()
-    }
-
-    fn col(&self, col: usize) -> Vec<(usize, usize)> {
-        let depth = col - self.origin.0;
-        let min_row = self.origin.1 - f64::floor((depth as f64 * self.start_slope)) as usize - 1;
-        let max_row = self.origin.1 + f64::ceil((depth as f64 * self.end_slope)) as usize;
-
-        log(&format!("Sweeping col {} from {} to {}", col, min_row, max_row));
-
-        (min_row ..= max_row)
-            .map(|row| (row, col))
+            .map(|col| (col, self.depth as i64))
             .collect()
     }
 }
+

@@ -87,13 +87,13 @@ impl View {
         
         let (_, viewshed, position) = (&players, &mut viewsheds, &positions).join().nth(0).expect("No viewshed for player");
 
-        //viewshed.visible_tiles = compute_fov((position.x, position.y), map);
+        viewshed.visible_tiles = compute_fov((position.x, position.y), map);
 
         for (idx, tile) in map.tiles.iter().enumerate() {
             let x = idx / map.height;
             let y = idx % map.height;
              
-            //if viewshed.contains(&(x, y)) {
+            if viewshed.contains(&(x, y)) {
                 self.stdout.queue(cursor::MoveTo(x as u16, y as u16))?;
 
                 if *tile == TileType::Wall {
@@ -101,7 +101,7 @@ impl View {
                 } else {
                     self.stdout.queue(style::Print('.'))?;
                 }
-            //}
+            }
         }
 
         Ok(())
