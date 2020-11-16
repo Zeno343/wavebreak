@@ -81,22 +81,14 @@ impl View {
     }
 
     pub fn draw_map(&mut self, map: &Map, world: &World) -> crossterm::Result<()> {
-        let mut viewsheds = world.write_storage::<Viewshed>();
-        let players = world.read_storage::<Player>();
-        let positions = world.read_storage::<Position>();
-        
-        let (_, viewshed, position) = (&players, &mut viewsheds, &positions).join().nth(0).expect("No viewshed for player");
-
-        viewshed.visible_tiles = compute_fov((position.x, position.y), map);
-
         for (idx, tile) in map.tiles.iter().enumerate() {
             let x = idx / map.height;
             let y = idx % map.height;
              
-            if viewshed.contains(&(x, y)) {
+            if map[(x, y)].visible || map[(x, y)].revealed {
                 self.stdout.queue(cursor::MoveTo(x as u16, y as u16))?;
-
-                if *tile == TileType::Wall {
+                
+                if tile.tile_type == TileType::Wall {
                     self.stdout.queue(style::Print('\u{2592}'))?;
                 } else {
                     self.stdout.queue(style::Print('.'))?;
@@ -151,22 +143,41 @@ pub struct State {
 
 #[derive(Component)]
 pub struct Viewshed {
-    visible_tiles: Vec<(usize, usize)>
+    visible_tiles: Vec<(usize, usize)>,
+    dirty: bool
 }
 
-impl Viewshed {
-    pub fn contains(&self, tile: &(usize, usize)) -> bool {
-        self.visible_tiles.contains(tile)
+fn reveal_map(world: &World) {
+    let players = world.read_storage::<Player>();
+    let mut viewsheds = world.write_storage::<Viewshed>();
+    let positions = world.read_storage::<Position>();
+
+    let mut map = world.fetch_mut::<Map>();
+
+    let (_, viewshed, position) = (&players, &mut viewsheds, &positions).join().nth(0).expect("No viewshed for player");
+
+    if viewshed.dirty {
+        for mut tile in &mut map.tiles {
+            tile.visible = false;
+        }
+
+        viewshed.visible_tiles = compute_fov((position.x, position.y), &map);
+
+        for &(x, y) in &viewshed.visible_tiles {
+            map[(x, y)].visible = true;
+            map[(x, y)].revealed = true;
+        }
     }
 }
-        
+    
 fn try_move_player(d_x: i16, d_y: i16, world: &World) {
     let mut positions = world.write_storage::<Position>();
-    let mut players = world.write_storage::<Player>();
+    let players = world.write_storage::<Player>();
+    let mut viewsheds = world.write_storage::<Viewshed>();
 
     let map = world.fetch::<Map>();
-
-    for (_, pos) in (&mut players, &mut positions).join() {
+    
+    for (_, pos, viewshed) in (&players, &mut positions, &mut viewsheds).join() {
         let dest_x: Option<usize> = (pos.x as i16 + d_x).try_into().ok();
         let dest_y: Option<usize> = (pos.y as i16 + d_y).try_into().ok();
         
@@ -177,9 +188,11 @@ fn try_move_player(d_x: i16, d_y: i16, world: &World) {
 
             if dest_x < map.width && dest_y < map.height {
                 log(&format!("Player landed on {:?}", map[(dest_x, dest_y)]));
-                if map[(dest_x, dest_y)] != TileType::Wall {
+                if map[(dest_x, dest_y)].tile_type != TileType::Wall {
                     pos.x = dest_x;
                     pos.y = dest_y;
+
+                    viewshed.dirty = true;
                 }
 
             }
@@ -223,20 +236,21 @@ fn main() -> crossterm::Result<()> {
     state.ecs.register::<Viewshed>();
     
     let dimensions = terminal::size()?;
-    let (map, rooms) = Map::random_rooms(dimensions.0 as usize, dimensions.1 as usize, 10, (5, 10), &mut rng);
-
-    state.ecs.insert(map);  
+    let map = Map::random_rooms(dimensions.0 as usize, dimensions.1 as usize, 10, (5, 10), &mut rng);
     state.ecs
         .create_entity()
         .with(Player)
-        .with(Position { x: rooms[0].center().0, y: rooms[0].center().1 })
+        .with(Position { x: map.rooms[0].center().0, y: map.rooms[0].center().1 })
         .with(Renderable {
             glyph: '@',
         })
-        .with(Viewshed { visible_tiles: Vec::new() })
+        .with(Viewshed { visible_tiles: Vec::new(), dirty: true })
         .build();
 
+    state.ecs.insert(map);  
+
     loop {
+        reveal_map(&state.ecs);
         tick(&state, &mut view);
 
         match event::read()? {

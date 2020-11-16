@@ -27,16 +27,16 @@ fn scan(row: &mut Row, quadrant: &Quadrant, map: &Map) -> Vec<(usize, usize)> {
     for tile in row.tiles() {
         let abs_tile = quadrant.transform(tile);
         
-        if map[abs_tile] == TileType::Wall || map[abs_tile] == TileType::Floor {
+        if map[abs_tile].tile_type == TileType::Wall || map[abs_tile].tile_type == TileType::Floor {
             visible_tiles.push(abs_tile);
         }
 
         if let Some(prev_tile) = previous_tile {
             let prev_abs_tile = quadrant.transform(prev_tile);
 
-            if map[prev_abs_tile] == TileType::Wall && map[abs_tile] == TileType::Floor {
+            if map[prev_abs_tile].tile_type == TileType::Wall && map[abs_tile].tile_type == TileType::Floor {
                 row.start_slope = slope(tile);
-            } else if map[prev_abs_tile] == TileType::Floor && map[abs_tile] == TileType::Wall {
+            } else if map[prev_abs_tile].tile_type == TileType::Floor && map[abs_tile].tile_type == TileType::Wall {
                 let mut next_row = row.next();
                 next_row.end_slope = slope(tile);
 
@@ -50,7 +50,7 @@ fn scan(row: &mut Row, quadrant: &Quadrant, map: &Map) -> Vec<(usize, usize)> {
     if let Some(prev_tile) = previous_tile {
         let prev_abs_tile = quadrant.transform(prev_tile);
 
-        if map[prev_abs_tile] == TileType::Floor {
+        if map[prev_abs_tile].tile_type == TileType::Floor {
             visible_tiles.extend(scan(&mut row.next(), &quadrant, map));
         }
     }
