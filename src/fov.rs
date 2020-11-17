@@ -10,7 +10,7 @@ use crate::{
 
 pub fn compute_fov(origin: (usize, usize), map: &Map) -> Vec<(usize, usize)> {
     static QUADRANTS: [Direction; 4] = [Direction::North, Direction::East, Direction::South, Direction::West];
-    let mut revealed_tiles = Vec::new();
+    let mut revealed_tiles = vec![origin];
 
     for &direction in &QUADRANTS {
         let quadrant = Quadrant { direction, origin };

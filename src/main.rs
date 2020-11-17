@@ -247,13 +247,17 @@ fn try_move_player(d_x: i16, d_y: i16, world: &World) {
 fn tick(state: &State, view: &mut View) {
     let positions = state.ecs.read_storage::<Position>();
     let renderables = state.ecs.read_storage::<Renderable>();
+    let viewsheds = state.ecs.read_storage::<Viewshed>();
+    let player = state.ecs.read_storage::<Player>();
 
     let map = state.ecs.fetch::<Map>(); 
-
+    
     view.begin_frame();
     view.draw_map(&map, &state.ecs);
     for (pos, render) in (&positions, &renderables).join() {
-        view.draw_entity(pos, render);
+        if map[(pos.x, pos.y)].visible {
+            view.draw_entity(pos, render);
+        }
     }
     view.end_frame();
 }
