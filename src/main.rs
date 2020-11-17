@@ -293,6 +293,19 @@ fn main() -> crossterm::Result<()> {
         .with(Viewshed { visible_tiles: Vec::new(), dirty: true })
         .build();
 
+    for room in map.rooms.iter().skip(1) {
+        state.ecs
+            .create_entity()
+            .with(Position { x: room.center().0, y: room.center().1 })
+            .with(Renderable {
+                glyph: 'g',
+                foreground: style::Color::Rgb{ r: 255, b: 0, g: 0 },
+                background: style::Color::Black,
+            })
+            .with(Viewshed { visible_tiles: Vec::new(), dirty: true })
+            .build();
+    }
+
     state.ecs.insert(map);  
 
     loop {
