@@ -26,8 +26,14 @@ fn scan(row: &mut Row, quadrant: &Quadrant, map: &Map) -> Vec<(usize, usize)> {
 
     for tile in row.tiles() {
         let abs_tile = quadrant.transform(tile);
-        
-        if map[abs_tile].tile_type == TileType::Wall || map[abs_tile].tile_type == TileType::Floor {
+        if abs_tile.0 > map.width || abs_tile.1 > map.height {
+            continue;
+        }
+
+        if map[abs_tile].tile_type == TileType::Wall 
+            || map[abs_tile].tile_type == TileType::Floor 
+            || is_symmetric(&row, tile) 
+        {
             visible_tiles.push(abs_tile);
         }
 
@@ -60,6 +66,11 @@ fn scan(row: &mut Row, quadrant: &Quadrant, map: &Map) -> Vec<(usize, usize)> {
 
 fn slope((col, row): (i64, i64)) -> f64 {
     (2 * col - 1) as f64 / (2 * row) as f64
+}
+
+fn is_symmetric(row: &Row, (col, _): (i64, i64)) -> bool {
+    (col as f64) >= row.depth as f64 * row.start_slope 
+        && (col as f64) <= row.depth as f64 * row.end_slope
 }
 
 #[derive(Clone, Copy)]

@@ -56,7 +56,7 @@ pub struct Map {
 
 impl Map {
     pub fn new(width: usize, height: usize) -> Map {
-        log(&format!("Created new map with dimensions {}x{}", width, height));
+        log(&format!("Created new map with dimensions {}x{}", width - 1, height - 1));
         Map {
             tiles: vec![
                 Tile { 
@@ -66,8 +66,8 @@ impl Map {
                 }; 
                 width * height
             ],
-            width,
-            height,
+            width: width,
+            height: height,
             rooms: Vec::new(),
         }
     }
@@ -75,12 +75,13 @@ impl Map {
     pub fn random_noise(width: usize, height: usize, density: f64, rng: &mut StdRng) -> Map {
         let mut map = Map::new(width, height);
 
-        for x in 0..width {
-            for y in 0..height {
-                if x == width - 1 || x == 0 || y == height - 1 || y == 0 {
+        for x in 0 .. map.width {
+            for y in 0 .. map.height {
+                if x == map.width - 1 || x == 0 || y == map.height - 1|| y == 0 {
                     map[(x, y)].tile_type = TileType::Wall;
+                    
                 } else if rng.gen_range(0.0, 1.0) <= density {
-                    map[(x,y)].tile_type = TileType::Wall;
+                    map[(x,y)].tile_type = TileType::Floor;
                 }
             }
         }
@@ -110,7 +111,7 @@ impl Map {
             log(&format!("Generated room: {:?}", new_room));
             let mut valid = true;
             
-            if new_room.x2 > width || new_room.y2 >= height { valid = false }
+            if new_room.x2 >= map.width || new_room.y2 >= map.height { valid = false }
 
             for room in map.rooms.iter() {
                 if new_room.intersects(room) { valid = false }
@@ -138,8 +139,8 @@ impl Map {
     }
 
     fn add_room(&mut self, room: Rectangle) {
-        for x in room.x1 + 1 ..= room.x2 {
-            for y in room.y1 + 1 ..= room.y2 {
+        for x in room.x1 + 1 .. room.x2 {
+            for y in room.y1 + 1 .. room.y2 {
                 self[(x, y)].tile_type = TileType::Floor;
             }
         }

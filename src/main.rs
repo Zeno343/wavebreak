@@ -29,6 +29,9 @@ use rand::{
     thread_rng,
 };
 
+use specs::prelude::*;
+use specs_derive::Component;
+
 mod fov;
 use fov::compute_fov;
 
@@ -38,8 +41,7 @@ use map::{
     TileType,
 };
 
-use specs::prelude::*;
-use specs_derive::Component;
+mod util;
 
 const LOG_FILE: &str = "log";
 
@@ -75,7 +77,12 @@ impl View {
     pub fn draw_entity(&mut self, position: &Position, renderable: &Renderable) -> crossterm::Result<()> {
         self.stdout
             .queue(cursor::MoveTo(position.x as u16, position.y as u16))?
-            .queue(style::Print(renderable.glyph))?;
+            .queue(style::PrintStyledContent(
+                    style::style(renderable.glyph)
+                    .with(renderable.foreground)
+                    .on(renderable.background)
+                )
+            )?;
 
         Ok(())
     }
@@ -85,13 +92,46 @@ impl View {
             let x = idx / map.height;
             let y = idx % map.height;
              
-            if map[(x, y)].visible || map[(x, y)].revealed {
+            if map[(x, y)].visible {
                 self.stdout.queue(cursor::MoveTo(x as u16, y as u16))?;
                 
                 if tile.tile_type == TileType::Wall {
-                    self.stdout.queue(style::Print('\u{2592}'))?;
+                    self.stdout.queue(
+                        style::PrintStyledContent(
+                            style::style('\u{2592}')
+                            .with(style::Color::White)
+                            .on(style::Color::Black)
+                        )
+                    )?;
+
                 } else {
-                    self.stdout.queue(style::Print('.'))?;
+                    self.stdout.queue(
+                        style::PrintStyledContent(
+                            style::style('.')
+                            .with(style::Color::White)
+                            .on(style::Color::Black)
+                        )
+                    )?;
+                }
+            } else if map[(x, y)].revealed {
+                self.stdout.queue(cursor::MoveTo(x as u16, y as u16))?;
+                
+                if tile.tile_type == TileType::Wall {
+                    self.stdout.queue(
+                        style::PrintStyledContent(
+                            style::style('\u{2592}')
+                            .with(style::Color::Rgb{r: 128, g: 128, b: 128})
+                            .on(style::Color::Black)
+                        )
+                    )?;
+                } else {
+                    self.stdout.queue(
+                        style::PrintStyledContent(
+                            style::style('.')
+                            .with(style::Color::Rgb{r: 128, g: 128, b: 128})
+                            .on(style::Color::Black)
+                        )
+                    )?;
                 }
             }
         }
@@ -106,8 +146,10 @@ impl View {
         Ok(())
     }
 
-    pub fn end_frame(&mut self) {
+    pub fn end_frame(&mut self) -> crossterm::Result<()> {
         self.stdout.flush();
+
+        Ok(())
     }
 }
 
@@ -135,6 +177,8 @@ pub struct Position {
 #[derive(Component)]
 pub struct Renderable {
     glyph: char,
+    foreground: style::Color,
+    background: style::Color,
 }
 
 pub struct State {
@@ -243,6 +287,8 @@ fn main() -> crossterm::Result<()> {
         .with(Position { x: map.rooms[0].center().0, y: map.rooms[0].center().1 })
         .with(Renderable {
             glyph: '@',
+            foreground: style::Color::Rgb{ r: 0, b: 0, g: 255 },
+            background: style::Color::Black,
         })
         .with(Viewshed { visible_tiles: Vec::new(), dirty: true })
         .build();
@@ -253,20 +299,22 @@ fn main() -> crossterm::Result<()> {
         reveal_map(&state.ecs);
         tick(&state, &mut view);
 
-        match event::read()? {
-            event::Event::Key(event::KeyEvent { code, .. }) => 
-                match code {
-                    event::KeyCode::Esc => break,
+        if event::poll(std::time::Duration::from_millis(30))? {
+            match event::read()? {
+                event::Event::Key(event::KeyEvent { code, .. }) => 
+                    match code {
+                        event::KeyCode::Esc => break,
 
-                    event::KeyCode::Left => { try_move_player(-1, 0, &state.ecs) },
-                    event::KeyCode::Right => { try_move_player(1, 0, &state.ecs) },
-                    event::KeyCode::Up => { try_move_player(0, -1, &state.ecs) },
-                    event::KeyCode::Down => { try_move_player(0, 1, &state.ecs) },
-                    
-                    _ => {},
-                }
+                        event::KeyCode::Left => { try_move_player(-1, 0, &state.ecs) },
+                        event::KeyCode::Right => { try_move_player(1, 0, &state.ecs) },
+                        event::KeyCode::Up => { try_move_player(0, -1, &state.ecs) },
+                        event::KeyCode::Down => { try_move_player(0, 1, &state.ecs) },
+                        
+                        _ => {},
+                    }
 
-            _ => {}
+                _ => {}
+            }
         }
     }
 
