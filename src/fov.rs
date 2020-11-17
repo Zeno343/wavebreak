@@ -1,4 +1,10 @@
-use std::ops::Mul;
+use std::{
+    cmp::{
+        max,
+        min,
+    },
+    ops::Mul,
+};
 
 use crate::{
     map::{
@@ -8,7 +14,7 @@ use crate::{
     log,
 };
 
-pub fn compute_fov(origin: (usize, usize), map: &Map) -> Vec<(usize, usize)> {
+pub fn compute_fov(origin: (usize, usize), map: &Map, range: usize) -> Vec<(usize, usize)> {
     static QUADRANTS: [Direction; 4] = [Direction::North, Direction::East, Direction::South, Direction::West];
     let mut revealed_tiles = vec![origin];
 
@@ -17,7 +23,19 @@ pub fn compute_fov(origin: (usize, usize), map: &Map) -> Vec<(usize, usize)> {
         let mut first_row = Row { depth: 1, start_slope: -1.0, end_slope: 1.0 };
         revealed_tiles.extend(scan(&mut first_row, &quadrant, map));
     }
+
     revealed_tiles
+        .iter()
+        .filter(|&&point| is_in_range(point, origin, range)) 
+        .map(|point| *point)
+        .collect()
+}
+
+fn is_in_range((x, y): (usize, usize), (o_x, o_y): (usize, usize), range: usize) -> bool {
+    let x_dist = if x > o_x { x - o_x } else { o_x - x }; 
+    let y_dist = if y > o_y { y - o_y } else { o_y - y };
+
+    (x_dist << 1) + (y_dist << 1) < range << 1
 }
 
 fn scan(row: &mut Row, quadrant: &Quadrant, map: &Map) -> Vec<(usize, usize)> {

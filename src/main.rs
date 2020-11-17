@@ -188,6 +188,7 @@ pub struct State {
 #[derive(Component)]
 pub struct Viewshed {
     visible_tiles: Vec<(usize, usize)>,
+    range: usize,
     dirty: bool
 }
 
@@ -205,7 +206,7 @@ fn reveal_map(world: &World) {
             tile.visible = false;
         }
 
-        viewshed.visible_tiles = compute_fov((position.x, position.y), &map);
+        viewshed.visible_tiles = compute_fov((position.x, position.y), &map, viewshed.range);
 
         for &(x, y) in &viewshed.visible_tiles {
             map[(x, y)].visible = true;
@@ -294,7 +295,7 @@ fn main() -> crossterm::Result<()> {
             foreground: style::Color::Rgb{ r: 0, b: 0, g: 255 },
             background: style::Color::Black,
         })
-        .with(Viewshed { visible_tiles: Vec::new(), dirty: true })
+        .with(Viewshed { visible_tiles: Vec::new(), range: 10, dirty: true })
         .build();
 
     for room in map.rooms.iter().skip(1) {
@@ -306,7 +307,7 @@ fn main() -> crossterm::Result<()> {
                 foreground: style::Color::Rgb{ r: 255, b: 0, g: 0 },
                 background: style::Color::Black,
             })
-            .with(Viewshed { visible_tiles: Vec::new(), dirty: true })
+            .with(Viewshed { visible_tiles: Vec::new(), range: 8, dirty: true })
             .build();
     }
 
