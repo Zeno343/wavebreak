@@ -246,13 +246,15 @@ fn try_move_player(d_x: i16, d_y: i16, world: &World) {
 }
 
 fn tick(state: &State, view: &mut View) {
+    reveal_map(&state.ecs);
+
     let positions = state.ecs.read_storage::<Position>();
     let renderables = state.ecs.read_storage::<Renderable>();
     let viewsheds = state.ecs.read_storage::<Viewshed>();
     let player = state.ecs.read_storage::<Player>();
 
     let map = state.ecs.fetch::<Map>(); 
-    
+
     view.begin_frame();
     view.draw_map(&map, &state.ecs);
     for (pos, render) in (&positions, &renderables).join() {
@@ -264,9 +266,7 @@ fn tick(state: &State, view: &mut View) {
 }
 
 fn main() -> crossterm::Result<()> {
-    {
-        let log = OpenOptions::new().write(true).truncate(true).open(LOG_FILE).expect("Could not open log file");
-    }
+    let _ = OpenOptions::new().write(true).truncate(true).open(LOG_FILE).expect("Could not open log file");
 
     panic::set_hook(Box::new(|panic_info| {
         let mut log = OpenOptions::new().append(true).create(true).open(LOG_FILE).expect("Could not open log file");
@@ -314,7 +314,6 @@ fn main() -> crossterm::Result<()> {
     state.ecs.insert(map);  
 
     loop {
-        reveal_map(&state.ecs);
         tick(&state, &mut view);
 
         if event::poll(std::time::Duration::from_millis(30))? {
