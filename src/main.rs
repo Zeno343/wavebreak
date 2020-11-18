@@ -114,6 +114,7 @@ fn main() -> crossterm::Result<()> {
     state.world.register::<Renderable>();
     state.world.register::<Viewshed>();
     state.world.register::<Monster>();
+    state.world.register::<Name>();
     
     let map = Map::random_rooms(view.width as usize, view.height as usize - 3, 10, (5, 10), &mut rng);
     let player_position = Position { x: map.rooms[0].center().0, y: map.rooms[0].center().1 };
@@ -121,6 +122,7 @@ fn main() -> crossterm::Result<()> {
     state.world
         .create_entity()
         .with(Player)
+        .with(Name { name: "Player".to_string() })
         .with(player_position)
         .with(Renderable {
             glyph: '@',
@@ -130,9 +132,10 @@ fn main() -> crossterm::Result<()> {
         .with(Viewshed { visible_tiles: Vec::new(), range: 10, dirty: true })
         .build();
 
-    for room in map.rooms.iter().skip(1) {
+    for (idx, room) in map.rooms.iter().skip(1).enumerate() {
         state.world
             .create_entity()
+            .with(Name { name: format!("Goblin #{}", idx + 1) })
             .with(Position { x: room.center().0, y: room.center().1 })
             .with(Renderable {
                 glyph: 'g',

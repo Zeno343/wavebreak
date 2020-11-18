@@ -4,10 +4,15 @@ use specs_derive::Component;
 use crossterm::style;
 
 #[derive(Component)]
-pub struct Player;
+pub struct Monster;
 
 #[derive(Component)]
-pub struct Monster;
+pub struct Name {
+    pub name: String,
+}
+
+#[derive(Component)]
+pub struct Player;
 
 #[derive(Component, Copy, Clone)]
 pub struct Position {
