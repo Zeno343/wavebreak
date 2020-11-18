@@ -1,9 +1,6 @@
 use std::{
     convert::TryInto,
-    fs::{
-        File,
-        OpenOptions,
-    },
+    fs::OpenOptions,
     io::{
         stdout,
         Stdout,
@@ -16,7 +13,6 @@ use crossterm::{
     cursor,
     event,
     ExecutableCommand,
-    queue,
     QueueableCommand,
     style,
     terminal,
@@ -66,7 +62,7 @@ impl View {
         let (width, height) = terminal::size()?;
 
         let mut stdout = stdout();
-        terminal::enable_raw_mode();
+        terminal::enable_raw_mode()?;
         stdout
             .execute(cursor::Hide)?
             .execute(event::EnableMouseCapture)?;
@@ -91,7 +87,7 @@ impl View {
         Ok(())
     }
 
-    pub fn draw_map(&mut self, map: &Map, world: &World) -> crossterm::Result<()> {
+    pub fn draw_map(&mut self, map: &Map) -> crossterm::Result<()> {
         for (idx, tile) in map.tiles.iter().enumerate() {
             let x = idx / map.height;
             let y = idx % map.height;
@@ -163,7 +159,7 @@ impl View {
     }
 
     pub fn end_frame(&mut self) -> crossterm::Result<()> {
-        self.stdout.flush();
+        self.stdout.flush()?;
 
         Ok(())
     }
@@ -177,7 +173,7 @@ impl Drop for View {
             .execute(cursor::MoveTo(0,0)).unwrap()
             .execute(event::DisableMouseCapture).unwrap();
 
-        terminal::disable_raw_mode();
+        terminal::disable_raw_mode().unwrap();
     }
 }
 
@@ -209,7 +205,6 @@ pub enum RunState{
 pub struct State {
     ecs: World,
     run_state: RunState,
-    message_queue: Queue<String>,
 }
 
 impl State {
@@ -224,22 +219,20 @@ impl State {
 
         let positions = self.ecs.read_storage::<Position>();
         let renderables = self.ecs.read_storage::<Renderable>();
-        let viewsheds = self.ecs.read_storage::<Viewshed>();
-        let player = self.ecs.read_storage::<Player>();
 
         let map = self.ecs.fetch::<Map>(); 
         let messages = self.ecs.fetch::<Queue<String>>();
         
-        view.begin_frame();
-        view.draw_map(&map, &self.ecs);
-        view.draw_message_log(&messages);
+        view.begin_frame().expect("Could not begin frame");
+        view.draw_map(&map).expect("Could not draw map");
+        view.draw_message_log(&messages).expect("Could not draw message log");
         for (pos, render) in (&positions, &renderables).join() {
             if map[(pos.x, pos.y)].visible {
-                view.draw_entity(pos, render);
+                view.draw_entity(pos, render).expect("Could not draw entity");
             }
         }
 
-        view.end_frame();
+        view.end_frame().expect("Could not end frame");
     }
 }
 
@@ -315,7 +308,7 @@ fn main() -> crossterm::Result<()> {
 
     panic::set_hook(Box::new(|panic_info| {
         let mut log = OpenOptions::new().append(true).create(true).open(LOG_FILE).expect("Could not open log file");
-        log.write_all(format!("panic occurred: {:?}", panic_info).as_bytes());
+        log.write_all(format!("panic occurred: {:?}", panic_info).as_bytes()).expect("Error writing to log file");
     }));
 
     let mut view = View::init().expect("Could not initialize view"); 
@@ -323,7 +316,6 @@ fn main() -> crossterm::Result<()> {
     let mut state = State { 
         ecs: World::new(),
         run_state: RunState::Running,
-        message_queue: Queue::new(3),
     };
     
     let mut rng = StdRng::from_rng(thread_rng()).expect("could not seed rng");
@@ -334,8 +326,7 @@ fn main() -> crossterm::Result<()> {
     state.ecs.register::<Viewshed>();
     state.ecs.register::<Monster>();
     
-    let dimensions = terminal::size()?;
-    let map = Map::random_rooms(dimensions.0 as usize, dimensions.1 as usize - 3, 10, (5, 10), &mut rng);
+    let map = Map::random_rooms(view.width as usize, view.height as usize - 3, 10, (5, 10), &mut rng);
     let player_position = Position { x: map.rooms[0].center().0, y: map.rooms[0].center().1 };
     
     state.ecs

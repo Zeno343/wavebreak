@@ -1,7 +1,6 @@
 use specs::prelude::*;
 use crate::{
     fov::compute_fov,
-    log,
     Monster,
     Map, 
     Position,

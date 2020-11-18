@@ -149,9 +149,9 @@ impl Map {
     }
 
     fn add_horizontal_corridor(&mut self, x1: usize, x2: usize, y: usize) {
-        if y >= 0 && y <= self.height as usize {
+        if y > 0 && y <= self.height as usize {
             for x in min(x1,x2) ..= max(x1,x2) {
-                if x >= 0 && x <= self.width as usize{
+                if x > 0 && x <= self.width as usize{
                     self[(x, y)].tile_type = TileType::Floor;
                 }
             }
@@ -159,9 +159,9 @@ impl Map {
     }
 
     fn add_vertical_corridor(&mut self, y1: usize, y2: usize, x: usize) {
-        if x >= 0 && x <= self.width as usize {
+        if x > 0 && x <= self.width as usize {
             for y in min(y1,y2) ..= max(y1,y2) {
-                if y >= 0 && y <= self.height as usize {
+                if y > 0 && y <= self.height as usize {
                     self[(x, y)].tile_type = TileType::Floor;
                 }
             }

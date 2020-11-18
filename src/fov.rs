@@ -1,17 +1,8 @@
-use std::{
-    cmp::{
-        max,
-        min,
-    },
-    ops::Mul,
-};
-
 use crate::{
     map::{
         Map,
         TileType,
     },
-    log,
 };
 
 pub fn compute_fov(origin: (usize, usize), map: &Map, range: usize) -> Vec<(usize, usize)> {
