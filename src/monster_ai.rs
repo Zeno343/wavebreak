@@ -1,11 +1,9 @@
 use specs::prelude::*;
 use crate::{
+    components::*,
     fov::compute_fov,
-    Monster,
     Map, 
-    Position,
     util::Queue,
-    Viewshed,
 };
 
 pub struct MonsterAi;

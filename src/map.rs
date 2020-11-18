@@ -72,23 +72,6 @@ impl Map {
         }
     }
 
-    pub fn random_noise(width: usize, height: usize, density: f64, rng: &mut StdRng) -> Map {
-        let mut map = Map::new(width, height);
-
-        for x in 0 .. map.width {
-            for y in 0 .. map.height {
-                if x == map.width - 1 || x == 0 || y == map.height - 1|| y == 0 {
-                    map[(x, y)].tile_type = TileType::Wall;
-                    
-                } else if rng.gen_range(0.0, 1.0) <= density {
-                    map[(x,y)].tile_type = TileType::Floor;
-                }
-            }
-        }
-
-        map
-    }
-
     pub fn random_rooms(
         width: usize, 
         height: usize, 
