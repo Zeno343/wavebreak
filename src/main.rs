@@ -41,7 +41,11 @@ use map::{
     TileType,
 };
 
+mod monster_ai;
+use monster_ai::MonsterAi;
+
 mod util;
+use util::Queue;
 
 const LOG_FILE: &str = "log";
 
@@ -139,6 +143,18 @@ impl View {
         Ok(())
     }
 
+    pub fn draw_message_log(&mut self, message_log: &Queue<String>) -> crossterm::Result<()> {
+        self.stdout.queue(cursor::MoveTo(0, self.height - message_log.max_size as u16))?;
+
+        for msg in message_log.iter() {
+            self.stdout
+                .queue(style::Print(msg))?
+                .queue(cursor::MoveToNextLine(1))?;
+        }
+
+        Ok(())
+    }
+
     pub fn begin_frame(&mut self) -> crossterm::Result<()> {
         self.stdout
             .execute(terminal::Clear(ClearType::All))?;
@@ -169,6 +185,9 @@ impl Drop for View {
 pub struct Player;
 
 #[derive(Component)]
+pub struct Monster;
+
+#[derive(Component, Copy, Clone)]
 pub struct Position {
     x: usize,
     y: usize,
@@ -181,9 +200,49 @@ pub struct Renderable {
     background: style::Color,
 }
 
+#[derive(Clone, Copy, PartialEq)]
+pub enum RunState{
+    Paused,
+    Running,
+}
+
 pub struct State {
     ecs: World,
+    run_state: RunState,
+    message_queue: Queue<String>,
 }
+
+impl State {
+    fn tick(&mut self, view: &mut View) {
+        if self.run_state == RunState::Running {
+            reveal_map(&self.ecs);
+
+            let mut monster_ai = MonsterAi { };
+            monster_ai.run_now(&self.ecs);
+
+        }
+
+        let positions = self.ecs.read_storage::<Position>();
+        let renderables = self.ecs.read_storage::<Renderable>();
+        let viewsheds = self.ecs.read_storage::<Viewshed>();
+        let player = self.ecs.read_storage::<Player>();
+
+        let map = self.ecs.fetch::<Map>(); 
+        let messages = self.ecs.fetch::<Queue<String>>();
+        
+        view.begin_frame();
+        view.draw_map(&map, &self.ecs);
+        view.draw_message_log(&messages);
+        for (pos, render) in (&positions, &renderables).join() {
+            if map[(pos.x, pos.y)].visible {
+                view.draw_entity(pos, render);
+            }
+        }
+
+        view.end_frame();
+    }
+}
+
 
 #[derive(Component)]
 pub struct Viewshed {
@@ -234,8 +293,14 @@ fn try_move_player(d_x: i16, d_y: i16, world: &World) {
             if dest_x < map.width && dest_y < map.height {
                 log(&format!("Player landed on {:?}", map[(dest_x, dest_y)]));
                 if map[(dest_x, dest_y)].tile_type != TileType::Wall {
+                    //set player's position component
                     pos.x = dest_x;
                     pos.y = dest_y;
+
+                    //update player position resource
+                    let mut player_pos = world.write_resource::<Position>();
+                    player_pos.x = pos.x;
+                    player_pos.y = pos.y;
 
                     viewshed.dirty = true;
                 }
@@ -243,26 +308,6 @@ fn try_move_player(d_x: i16, d_y: i16, world: &World) {
             }
         }
     }
-}
-
-fn tick(state: &State, view: &mut View) {
-    reveal_map(&state.ecs);
-
-    let positions = state.ecs.read_storage::<Position>();
-    let renderables = state.ecs.read_storage::<Renderable>();
-    let viewsheds = state.ecs.read_storage::<Viewshed>();
-    let player = state.ecs.read_storage::<Player>();
-
-    let map = state.ecs.fetch::<Map>(); 
-
-    view.begin_frame();
-    view.draw_map(&map, &state.ecs);
-    for (pos, render) in (&positions, &renderables).join() {
-        if map[(pos.x, pos.y)].visible {
-            view.draw_entity(pos, render);
-        }
-    }
-    view.end_frame();
 }
 
 fn main() -> crossterm::Result<()> {
@@ -275,7 +320,11 @@ fn main() -> crossterm::Result<()> {
 
     let mut view = View::init().expect("Could not initialize view"); 
 
-    let mut state = State { ecs: World::new() };
+    let mut state = State { 
+        ecs: World::new(),
+        run_state: RunState::Running,
+        message_queue: Queue::new(3),
+    };
     
     let mut rng = StdRng::from_rng(thread_rng()).expect("could not seed rng");
 
@@ -283,13 +332,16 @@ fn main() -> crossterm::Result<()> {
     state.ecs.register::<Position>();
     state.ecs.register::<Renderable>();
     state.ecs.register::<Viewshed>();
+    state.ecs.register::<Monster>();
     
     let dimensions = terminal::size()?;
-    let map = Map::random_rooms(dimensions.0 as usize, dimensions.1 as usize, 10, (5, 10), &mut rng);
+    let map = Map::random_rooms(dimensions.0 as usize, dimensions.1 as usize - 3, 10, (5, 10), &mut rng);
+    let player_position = Position { x: map.rooms[0].center().0, y: map.rooms[0].center().1 };
+    
     state.ecs
         .create_entity()
         .with(Player)
-        .with(Position { x: map.rooms[0].center().0, y: map.rooms[0].center().1 })
+        .with(player_position)
         .with(Renderable {
             glyph: '@',
             foreground: style::Color::Rgb{ r: 0, b: 0, g: 255 },
@@ -308,13 +360,18 @@ fn main() -> crossterm::Result<()> {
                 background: style::Color::Black,
             })
             .with(Viewshed { visible_tiles: Vec::new(), range: 8, dirty: true })
+            .with(Monster)
             .build();
     }
 
     state.ecs.insert(map);  
+    state.ecs.insert(player_position);
+
+    let messages = Queue::<String>::new(3);
+    state.ecs.insert(messages);
 
     loop {
-        tick(&state, &mut view);
+        state.tick(&mut view);
 
         if event::poll(std::time::Duration::from_millis(30))? {
             match event::read()? {
@@ -330,8 +387,13 @@ fn main() -> crossterm::Result<()> {
                         _ => {},
                     }
 
+                    
                 _ => {}
             }
+
+            state.run_state = RunState::Running;
+        } else {
+            state.run_state = RunState::Paused;
         }
     }
 
