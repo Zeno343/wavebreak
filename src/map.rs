@@ -150,6 +150,21 @@ impl Map {
             }
         }
     }
+
+    pub fn neighbors(&self, tile: (usize, usize)) -> Vec<(usize, usize)> {
+        let mut neighbors = Vec::new();
+
+        for x in -1..=1 {
+            for y in -1..=1 {
+                let potential_neighbor = ((tile.0 as i64 + x) as usize, (tile.1 as i64 + y) as usize);
+                if self[potential_neighbor].tile_type != TileType::Wall {
+                    neighbors.push(potential_neighbor);
+                }
+            }
+        }
+
+        neighbors
+    }
 }
 
 impl Index<(usize, usize)> for Map {

@@ -25,6 +25,10 @@ impl<T> Queue<T> {
         self.queue.remove(0)
     }
 
+    pub fn len(&self) -> usize {
+        self.queue.len()
+    }
+
     pub fn iter(&self) -> std::slice::Iter<T> {
         self.queue.iter()
     }

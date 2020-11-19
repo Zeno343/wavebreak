@@ -32,6 +32,7 @@ use map::{
 };
 
 mod monster_ai;
+mod pathfinding;
 
 mod state;
 use state::{
