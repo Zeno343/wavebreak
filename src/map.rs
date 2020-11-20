@@ -165,6 +165,25 @@ impl Map {
 
         neighbors
     }
+
+    pub fn cost(&self, start: (usize, usize), end: (usize, usize)) -> usize {
+        let mut x_distance = 0;
+        let mut y_distance = 0;
+        
+        if start.0 > end.0 {
+            x_distance = start.0 - end.0
+        } else {
+            x_distance = end.0 - start.0
+        }
+
+        if start.1 > end.1 {
+            y_distance = start.1 - end.1
+        } else {
+            y_distance = end.1 - start.1
+        }
+        
+        ((x_distance as f64 + y_distance as f64).sqrt() * 1_000.0) as usize
+    }
 }
 
 impl Index<(usize, usize)> for Map {

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     map::Map,
-    util::Queue,
+    util::PriorityQueue,
 };
 
 pub fn find_path(
@@ -10,23 +10,30 @@ pub fn find_path(
     end: (usize, usize), 
     map: &Map
 ) -> Vec<(usize, usize)> {
-    let mut frontier = Queue::new(usize::MAX);
+    let mut frontier = PriorityQueue::new(usize::MAX);
     let mut reached = HashMap::new();
+    let mut costs = HashMap::new();
     
-    frontier.push(start);
+    frontier.push((start, 0).into());
     reached.insert(start, None);
+    costs.insert(start, 0);
 
     while frontier.len() > 0 {
-        let current_tile = frontier.pop();
+        let frontier_item = frontier.pop().unwrap();
+        
+        let current_tile = frontier_item.item;
         if current_tile == end {
             break;
         }
 
         for next_tile in map.neighbors(current_tile).into_iter() {
-            if !reached.contains_key(&next_tile) {
+            let cost = costs.get(&current_tile).unwrap() + map.cost(current_tile, next_tile);
+            if !costs.contains_key(&next_tile) || cost < *costs.get(&next_tile).unwrap() {
+                costs.insert(next_tile, cost);
+                frontier.push((next_tile, cost).into());
                 reached.insert(next_tile, Some(current_tile));
-                frontier.push(next_tile);
             }
+            
         }
     }
 
