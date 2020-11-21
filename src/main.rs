@@ -7,11 +7,6 @@ use std::{
     panic,
 };
 
-use crossterm::{
-    event,
-    style,
-};
-
 use rand::{
     rngs::StdRng,
     SeedableRng,
@@ -43,10 +38,26 @@ use state::{
 mod util;
 use util::Queue;
 
-mod view;
-use view::View;
+pub use wavebreaker_sdl2::{
+    font::{
+        FontCache,
+        FontManager,
+    },
+    view::{
+        Color,
+        Event,
+        Keycode,
+        Rect,
+        View,
+    }
+};
 
 const LOG_FILE: &str = "log";
+
+const SCREEN_WIDTH: u32 = 1920;
+const SCREEN_HEIGHT: u32 = 1024;
+const CELL_WIDTH: u32 = 15;
+const CELL_HEIGHT: u32 = 20;
 
 fn log(message: &str) {
     let mut log = OpenOptions::new().append(true).create(true).open(LOG_FILE).expect("Could not open log file");
@@ -54,10 +65,7 @@ fn log(message: &str) {
     log.write(&['\n' as u8]).expect("could not write to log file");
 }
 
-
-
-    
-fn try_move_player(d_x: i16, d_y: i16, world: &World) {
+fn try_move_player(d_x: i16, d_y: i16, world: &World) -> bool {
     let mut positions = world.write_storage::<Position>();
     let players = world.write_storage::<Player>();
     let mut viewsheds = world.write_storage::<Viewshed>();
@@ -86,14 +94,18 @@ fn try_move_player(d_x: i16, d_y: i16, world: &World) {
                     player_pos.y = pos.y;
 
                     viewshed.dirty = true;
+
+                    return true;
                 }
 
             }
         }
     }
+
+    false
 }
 
-fn main() -> crossterm::Result<()> {
+fn main() -> Result<(), String> {
     let _ = OpenOptions::new().write(true).truncate(true).open(LOG_FILE).expect("Could not open log file");
 
     panic::set_hook(Box::new(|panic_info| {
@@ -101,11 +113,14 @@ fn main() -> crossterm::Result<()> {
         log.write_all(format!("panic occurred: {:?}", panic_info).as_bytes()).expect("Error writing to log file");
     }));
 
-    let mut view = View::init().expect("Could not initialize view"); 
+    let mut view = View::init("Wavebreaker", SCREEN_WIDTH, SCREEN_HEIGHT).expect("Could not initialize view"); 
+    let font_manager = FontManager::init(view.canvas())?;
+    let input_mono = font_manager.load("assets/InputMono-Regular.ttf")?;
 
     let mut state = State { 
         world: World::new(),
         run_state: RunState::Running,
+        font: input_mono,
     };
     
     let mut rng = StdRng::from_rng(thread_rng()).expect("could not seed rng");
@@ -117,7 +132,9 @@ fn main() -> crossterm::Result<()> {
     state.world.register::<Monster>();
     state.world.register::<Name>();
     
-    let map = Map::random_rooms(view.width as usize, view.height as usize - 3, 10, (5, 10), &mut rng);
+    let map_width = SCREEN_WIDTH / CELL_WIDTH;
+    let map_height = SCREEN_HEIGHT / CELL_HEIGHT;
+    let map = Map::random_rooms(map_width as usize, map_height as usize, 10, (5, 10), &mut rng);
     let player_position = Position { x: map.rooms[0].center().0, y: map.rooms[0].center().1 };
     
     state.world
@@ -127,8 +144,7 @@ fn main() -> crossterm::Result<()> {
         .with(player_position)
         .with(Renderable {
             glyph: '@',
-            foreground: style::Color::Rgb{ r: 0, b: 0, g: 255 },
-            background: style::Color::Black,
+            color: Color::RGB(0, 0, 255),
         })
         .with(Viewshed { visible_tiles: Vec::new(), range: 10, dirty: true })
         .build();
@@ -140,8 +156,7 @@ fn main() -> crossterm::Result<()> {
             .with(Position { x: room.center().0, y: room.center().1 })
             .with(Renderable {
                 glyph: 'g',
-                foreground: style::Color::Rgb{ r: 255, b: 0, g: 0 },
-                background: style::Color::Black,
+                color: Color::RGB(255, 0, 0)
             })
             .with(Viewshed { visible_tiles: Vec::new(), range: 8, dirty: true })
             .with(Monster)
@@ -154,30 +169,45 @@ fn main() -> crossterm::Result<()> {
     let messages = Queue::<String>::new(3);
     state.world.insert(messages);
 
-    loop {
+    let mut event_pump = view.event_pump()?;
+
+    let mut quit = false;
+    while !quit {
         state.tick(&mut view);
+        
+        for event in event_pump.poll_iter() {
+            match event {
+                Event::Quit {..} |
+                Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
+                    quit = true;
+                },
 
-        if event::poll(std::time::Duration::from_millis(30))? {
-            match event::read()? {
-                event::Event::Key(event::KeyEvent { code, .. }) => 
-                    match code {
-                        event::KeyCode::Esc => break,
-
-                        event::KeyCode::Left => { try_move_player(-1, 0, &state.world) },
-                        event::KeyCode::Right => { try_move_player(1, 0, &state.world) },
-                        event::KeyCode::Up => { try_move_player(0, -1, &state.world) },
-                        event::KeyCode::Down => { try_move_player(0, 1, &state.world) },
-                        
-                        _ => {},
+                Event::KeyDown { keycode: Some(Keycode::Left), .. } => {
+                    if try_move_player(-1, 0, &state.world) {
+                        state.run_state = RunState::Running;
                     }
+                }
 
-                    
+                Event::KeyDown { keycode: Some(Keycode::Right), .. } => {
+                    if try_move_player(1, 0, &state.world) {
+                        state.run_state = RunState::Running;
+                    }
+                }
+
+                Event::KeyDown { keycode: Some(Keycode::Up), .. } => {
+                    if try_move_player(0, -1, &state.world) {
+                        state.run_state = RunState::Running;
+                    }
+                }
+
+                Event::KeyDown { keycode: Some(Keycode::Down), .. } => {
+                    if try_move_player(0, 1, &state.world) {
+                        state.run_state = RunState::Running;
+                    }
+                }
+
                 _ => {}
             }
-
-            state.run_state = RunState::Running;
-        } else {
-            state.run_state = RunState::Paused;
         }
     }
 

@@ -1,7 +1,7 @@
 use specs::prelude::*;
 use specs_derive::Component;
 
-use crossterm::style;
+use crate::Color;
 
 #[derive(Component)]
 pub struct Monster;
@@ -23,8 +23,7 @@ pub struct Position {
 #[derive(Component)]
 pub struct Renderable {
     pub glyph: char,
-    pub foreground: style::Color,
-    pub background: style::Color,
+    pub color: Color,
 }
 
 #[derive(Component)]

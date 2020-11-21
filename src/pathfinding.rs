@@ -10,7 +10,7 @@ pub fn find_path(
     end: (usize, usize), 
     map: &Map
 ) -> Vec<(usize, usize)> {
-    let mut frontier = PriorityQueue::new(usize::MAX);
+    let mut frontier = PriorityQueue::new(std::usize::MAX);
     let mut reached = HashMap::new();
     let mut costs = HashMap::new();
     
