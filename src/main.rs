@@ -56,7 +56,7 @@ const LOG_FILE: &str = "log";
 
 const SCREEN_WIDTH: u32 = 1920;
 const SCREEN_HEIGHT: u32 = 1024;
-const CELL_WIDTH: u32 = 15;
+const CELL_WIDTH: u32 = 12;
 const CELL_HEIGHT: u32 = 20;
 
 fn log(message: &str) {

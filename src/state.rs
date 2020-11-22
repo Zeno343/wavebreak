@@ -60,6 +60,7 @@ pub fn draw_entity(view: &mut View, font: &mut FontCache, position: &Position, r
         font, 
         renderable.glyph, 
         renderable.color, 
+        Color::RGB(0, 0, 0),
         Rect::new((position.x as u32 * CELL_WIDTH) as i32, (position.y as u32 * CELL_HEIGHT) as i32, CELL_WIDTH, CELL_HEIGHT)
     )
         .expect("Could not render entity");
@@ -71,7 +72,8 @@ pub fn draw_map(view: &mut View, font: &mut FontCache, map: &Map) -> crossterm::
         let y = idx % map.height;
          
         let color: Color;
-        
+        let background = Color::RGB(0, 0, 0); 
+
         let visible = map[(x,y)].visible;
 
         if visible {
@@ -84,8 +86,9 @@ pub fn draw_map(view: &mut View, font: &mut FontCache, map: &Map) -> crossterm::
             match tile.tile_type {
                TileType::Wall => { 
                     view.draw_glyph(font, 
-                        '\u{2592}', 
+                        '\u{2593}', 
                         color,
+                        background,
                         Rect::new((x as u32 * CELL_WIDTH) as i32, (y as u32 * CELL_HEIGHT) as i32, CELL_WIDTH, CELL_HEIGHT)
                     )
                         .expect("Could not render entity");
@@ -95,6 +98,7 @@ pub fn draw_map(view: &mut View, font: &mut FontCache, map: &Map) -> crossterm::
                     view.draw_glyph(font, 
                         '.', 
                         color,
+                        background,
                         Rect::new((x as u32 * CELL_WIDTH) as i32, (y as u32 * CELL_HEIGHT) as i32, CELL_WIDTH, CELL_HEIGHT)
                     )
                         .expect("Could not render entity");
