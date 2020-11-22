@@ -9,12 +9,10 @@ use std::{
     },
 };
 
-use rand::{
-    rngs::StdRng,
-    Rng,
+use crate::{
+    log,
+    simple_rng::SimpleRng,
 };
-
-use crate::log;
 
 #[derive(PartialEq, Copy, Clone, Debug)]
 pub enum TileType {
@@ -32,7 +30,8 @@ pub struct Rectangle {
 
 impl Rectangle {
     pub fn intersects(&self, other: &Rectangle) -> bool {
-        self.x1 <= other.x2 && self.x2 >= other.x1 && self.y1 <= other.y2 && self.y2 >= other.y1
+        self.x1 <= other.x2 && self.x2 >= other.x1 
+            && self.y1 <= other.y2 && self.y2 >= other.y1
     }
 
     pub fn center(&self) -> (usize, usize) {
@@ -77,17 +76,17 @@ impl Map {
         height: usize, 
         max_rooms: usize, 
         (min_side_length, max_side_length): (usize, usize), 
-        rng: &mut StdRng
+        rng: &mut SimpleRng
     ) -> Map {
         let mut map = Map::new(width, height);
         log("Filling map with rooms"); 
 
         for _ in 0..max_rooms {
-            let x1 = rng.gen_range(0, width);
-            let x2 = x1 + rng.gen_range(min_side_length, max_side_length);
+            let x1 = rng.roll(0, width);
+            let x2 = x1 + rng.roll(min_side_length, max_side_length);
 
-            let y1 = rng.gen_range(0, height);
-            let y2 = y1 + rng.gen_range(min_side_length, max_side_length);
+            let y1 = rng.roll(0, height);
+            let y2 = y1 + rng.roll(min_side_length, max_side_length);
 
             let new_room = Rectangle { x1, x2, y1, y2 };
             
@@ -104,7 +103,7 @@ impl Map {
                 if !map.rooms.is_empty() {
                     let (new_x, new_y) = new_room.center();
                     let (prev_x, prev_y) = map.rooms[map.rooms.len()-1].center();
-                    if rng.gen_range(0,2) == 1 {
+                    if rng.roll(0,2) == 1 {
                         map.add_horizontal_corridor(prev_x, new_x, prev_y);
                         map.add_vertical_corridor(prev_y, new_y, new_x);
                     } else {
@@ -156,7 +155,10 @@ impl Map {
 
         for x in -1..=1 {
             for y in -1..=1 {
-                let potential_neighbor = ((tile.0 as i64 + x) as usize, (tile.1 as i64 + y) as usize);
+                let potential_neighbor = (
+                    (tile.0 as i64 + x) as usize, 
+                    (tile.1 as i64 + y) as usize
+                );
                 if self[potential_neighbor].tile_type != TileType::Wall {
                     neighbors.push(potential_neighbor);
                 }
@@ -167,8 +169,8 @@ impl Map {
     }
 
     pub fn cost(&self, start: (usize, usize), end: (usize, usize)) -> usize {
-        let mut x_distance = 0;
-        let mut y_distance = 0;
+        let x_distance;
+        let y_distance;
         
         if start.0 > end.0 {
             x_distance = start.0 - end.0

@@ -5,15 +5,19 @@ use std::{
         Write,
     },
     panic,
-};
-
-use rand::{
-    rngs::StdRng,
-    SeedableRng,
-    thread_rng,
+    time::{
+        SystemTime,
+        UNIX_EPOCH,
+    },
 };
 
 use specs::prelude::*;
+
+mod app;
+use app::{
+    App,
+    State,
+};
 
 mod components;
 use components::*;
@@ -29,11 +33,8 @@ use map::{
 mod monster_ai;
 mod pathfinding;
 
-mod app;
-use app::{
-    App,
-    State,
-};
+mod simple_rng;
+use simple_rng::SimpleRng;
 
 mod util;
 use util::Queue;
@@ -122,8 +123,14 @@ fn main() -> Result<(), String> {
         run_state: State::Running,
         font: input_mono,
     };
-    
-    let mut rng = StdRng::from_rng(thread_rng()).expect("could not seed rng");
+
+    let now = SystemTime::now();
+    let timestamp = now
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards")
+        .as_secs();
+
+    let mut rng = SimpleRng::new(timestamp as usize);
 
     state.world.register::<Player>();
     state.world.register::<Position>();
@@ -134,8 +141,16 @@ fn main() -> Result<(), String> {
     
     let map_width = SCREEN_WIDTH / CELL_WIDTH;
     let map_height = SCREEN_HEIGHT / CELL_HEIGHT;
-    let map = Map::random_rooms(map_width as usize, map_height as usize, 10, (5, 10), &mut rng);
-    let player_position = Position { x: map.rooms[0].center().0, y: map.rooms[0].center().1 };
+    let map = Map::random_rooms(
+        map_width as usize, 
+        map_height as usize, 
+        10, (5, 10), 
+        &mut rng
+    );
+    let player_position = Position { 
+        x: map.rooms[0].center().0, 
+        y: map.rooms[0].center().1 
+    };
     
     state.world
         .create_entity()
