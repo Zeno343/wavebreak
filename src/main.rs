@@ -147,6 +147,7 @@ fn main() -> Result<(), String> {
     state.world.register::<Monster>();
     state.world.register::<Name>();
     state.world.register::<BlocksTile>();
+    state.world.register::<CombatStats>();
     
     let map_width = SCREEN_WIDTH / CELL_WIDTH;
     let map_height = SCREEN_HEIGHT / CELL_HEIGHT;
@@ -171,6 +172,7 @@ fn main() -> Result<(), String> {
             color: Color::RGB(0, 0, 255),
         })
         .with(Viewshed { visible_tiles: Vec::new(), range: 10, dirty: true })
+        .with(CombatStats {max_hp: 30, hp: 30, defense: 2, power: 5 })
         .build();
 
     for (idx, room) in map.rooms.iter().skip(1).enumerate() {
@@ -185,6 +187,7 @@ fn main() -> Result<(), String> {
             .with(Viewshed { visible_tiles: Vec::new(), range: 8, dirty: true })
             .with(Monster)
             .with(BlocksTile)
+            .with(CombatStats{ max_hp: 16, hp: 16, defense: 1, power: 4 })
             .build();
     }
 

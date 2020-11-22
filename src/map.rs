@@ -9,6 +9,8 @@ use std::{
     },
 };
 
+use specs::Entity;
+
 use crate::{
     log,
     simple_rng::SimpleRng,
@@ -39,12 +41,13 @@ impl Rectangle {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct Tile {
     pub tile_type: TileType,
     pub revealed: bool,
     pub visible: bool,
     pub blocked: bool,
+    pub entities: Vec<Entity>
 }
 
 pub struct Map {
@@ -64,6 +67,7 @@ impl Map {
                     revealed: false, 
                     visible: false,
                     blocked: false,
+                    entities: Vec::new(),
                 }; 
                 width * height
             ],
@@ -159,6 +163,12 @@ impl Map {
             } else {
                 tile.blocked = false;
             }
+        }
+    }
+    
+    pub fn clear_entities(&mut self) {
+        for mut tile in self.tiles.iter_mut() {
+            tile.entities.clear();
         }
     }
 

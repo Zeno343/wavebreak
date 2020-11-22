@@ -49,7 +49,7 @@ impl<'a> App<'a> {
         let map = self.world.fetch::<Map>(); 
         
         view.clear();
-        draw_map(view, &mut self.font, &map).expect("Could not draw map");
+        draw_map(view, &mut self.font, &map);
         for (pos, render) in (&positions, &renderables).join() {
             if map[(pos.x, pos.y)].visible {
                 draw_entity(view, &mut self.font, pos, render);
@@ -73,7 +73,7 @@ pub fn draw_entity(view: &mut View, font: &mut FontCache, position: &Position, r
         .expect("Could not render entity");
 }
 
-pub fn draw_map(view: &mut View, font: &mut FontCache, map: &Map) -> crossterm::Result<()> {
+pub fn draw_map(view: &mut View, font: &mut FontCache, map: &Map) {
     for (idx, tile) in map.tiles.iter().enumerate() {
         let x = idx / map.height;
         let y = idx % map.height;
@@ -90,15 +90,17 @@ pub fn draw_map(view: &mut View, font: &mut FontCache, map: &Map) -> crossterm::
         }
 
         if visible || map[(x,y)].revealed {
+            let x = (x as u32 * CELL_WIDTH) as i32;
+            let y = (y as u32 * CELL_HEIGHT) as i32;
+            
             match tile.tile_type {
                TileType::Wall => { 
                     view.draw_glyph(font, 
                         '\u{2593}', 
                         color,
                         background,
-                        Rect::new((x as u32 * CELL_WIDTH) as i32, (y as u32 * CELL_HEIGHT) as i32, CELL_WIDTH, CELL_HEIGHT)
-                    )
-                        .expect("Could not render entity");
+                        Rect::new(x, y, CELL_WIDTH, CELL_HEIGHT)
+                    ).expect("Could not render entity");
                 },
 
                 TileType::Floor => {
@@ -106,15 +108,12 @@ pub fn draw_map(view: &mut View, font: &mut FontCache, map: &Map) -> crossterm::
                         '.', 
                         color,
                         background,
-                        Rect::new((x as u32 * CELL_WIDTH) as i32, (y as u32 * CELL_HEIGHT) as i32, CELL_WIDTH, CELL_HEIGHT)
-                    )
-                        .expect("Could not render entity");
+                        Rect::new(x, y, CELL_WIDTH, CELL_HEIGHT)
+                    ).expect("Could not render entity");
                 },
             }
         }
     }
-
-    Ok(())
 }
 
 fn reveal_map(world: &World) {
@@ -124,14 +123,22 @@ fn reveal_map(world: &World) {
 
     let mut map = world.fetch_mut::<Map>();
 
-    let (_, viewshed, position) = (&players, &mut viewsheds, &positions).join().nth(0).expect("No viewshed for player");
+    let (_, viewshed, position) = 
+        (&players, &mut viewsheds, &positions)
+            .join()
+            .nth(0)
+            .expect("No viewshed for player");
 
     if viewshed.dirty {
         for mut tile in &mut map.tiles {
             tile.visible = false;
         }
 
-        viewshed.visible_tiles = compute_fov((position.x, position.y), &map, viewshed.range);
+        viewshed.visible_tiles = compute_fov(
+            (position.x, position.y), 
+            &map, 
+            viewshed.range
+        );
 
         for &(x, y) in &viewshed.visible_tiles {
             map[(x, y)].visible = true;

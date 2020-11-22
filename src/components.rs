@@ -4,10 +4,18 @@ use specs_derive::Component;
 use crate::Color;
 
 #[derive(Component)]
-pub struct Monster;
+pub struct BlocksTile;
+
+#[derive(Component, Debug)]
+pub struct CombatStats {
+    pub max_hp : i32,
+    pub hp : i32,
+    pub defense : i32,
+    pub power : i32
+}
 
 #[derive(Component)]
-pub struct BlocksTile;
+pub struct Monster;
 
 #[derive(Component)]
 pub struct Name {

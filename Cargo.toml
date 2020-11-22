@@ -10,8 +10,6 @@ edition = "2018"
 members = ["wavebreaker_sdl2"]
 
 [dependencies]
-crossterm = "0.18"
-rand = "0.7"
 specs = "0.16"
 specs-derive = "0.4"
 wavebreaker_sdl2 = { path = "wavebreaker_sdl2" }
