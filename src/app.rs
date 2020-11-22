@@ -10,6 +10,7 @@ use crate::{
         Map,
         TileType,
     },
+    map_processing::MapProcessing,
     monster_ai::MonsterAi,
     Rect,
     SCREEN_HEIGHT,
@@ -35,6 +36,9 @@ impl<'a> App<'a> {
 
             let mut monster_ai = MonsterAi { };
             monster_ai.run_now(&self.world);
+
+            let mut map_processing = MapProcessing { };
+            map_processing.run_now(&self.world);
 
             self.run_state = State::Paused;
         }

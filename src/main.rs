@@ -27,9 +27,9 @@ mod fov;
 mod map;
 use map::{
     Map,
-    TileType,
 };
 
+mod map_processing;
 mod monster_ai;
 mod pathfinding;
 
@@ -77,14 +77,22 @@ fn try_move_player(d_x: i16, d_y: i16, world: &World) -> bool {
         let dest_x: Option<usize> = (pos.x as i16 + d_x).try_into().ok();
         let dest_y: Option<usize> = (pos.y as i16 + d_y).try_into().ok();
         
-        log(&format!("Player attempting move from {},{} to {},{}", pos.x, pos.y, dest_x.unwrap(), dest_y.unwrap()));
-        if dest_x.is_some() || dest_y.is_some() {
+        log(
+            &format!("Player attempting move from {},{} to {},{}", 
+                pos.x, 
+                pos.y, 
+                dest_x.unwrap(), 
+                dest_y.unwrap()
+            )
+        );
+
+        if dest_x.is_some() && dest_y.is_some() {
             let dest_x = dest_x.unwrap();
             let dest_y = dest_y.unwrap();
 
             if dest_x < map.width && dest_y < map.height {
                 log(&format!("Player landed on {:?}", map[(dest_x, dest_y)]));
-                if map[(dest_x, dest_y)].tile_type != TileType::Wall {
+                if !map[(dest_x, dest_y)].blocked {
                     //set player's position component
                     pos.x = dest_x;
                     pos.y = dest_y;
@@ -138,6 +146,7 @@ fn main() -> Result<(), String> {
     state.world.register::<Viewshed>();
     state.world.register::<Monster>();
     state.world.register::<Name>();
+    state.world.register::<BlocksTile>();
     
     let map_width = SCREEN_WIDTH / CELL_WIDTH;
     let map_height = SCREEN_HEIGHT / CELL_HEIGHT;
@@ -175,6 +184,7 @@ fn main() -> Result<(), String> {
             })
             .with(Viewshed { visible_tiles: Vec::new(), range: 8, dirty: true })
             .with(Monster)
+            .with(BlocksTile)
             .build();
     }
 

@@ -7,6 +7,9 @@ use crate::Color;
 pub struct Monster;
 
 #[derive(Component)]
+pub struct BlocksTile;
+
+#[derive(Component)]
 pub struct Name {
     pub name: String,
 }

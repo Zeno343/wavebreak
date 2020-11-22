@@ -44,6 +44,7 @@ pub struct Tile {
     pub tile_type: TileType,
     pub revealed: bool,
     pub visible: bool,
+    pub blocked: bool,
 }
 
 pub struct Map {
@@ -61,7 +62,8 @@ impl Map {
                 Tile { 
                     tile_type: TileType::Wall, 
                     revealed: false, 
-                    visible: false 
+                    visible: false,
+                    blocked: false,
                 }; 
                 width * height
             ],
@@ -150,16 +152,25 @@ impl Map {
         }
     }
 
+    pub fn populate_blocked(&mut self)  {
+        for mut tile in self.tiles.iter_mut() {
+            if tile.tile_type == TileType::Wall {
+                tile.blocked = true;
+            } else {
+                tile.blocked = false;
+            }
+        }
+    }
+
     pub fn neighbors(&self, tile: (usize, usize)) -> Vec<(usize, usize)> {
         let mut neighbors = Vec::new();
-
         for x in -1..=1 {
             for y in -1..=1 {
                 let potential_neighbor = (
                     (tile.0 as i64 + x) as usize, 
                     (tile.1 as i64 + y) as usize
                 );
-                if self[potential_neighbor].tile_type != TileType::Wall {
+                if !self[potential_neighbor].blocked {
                     neighbors.push(potential_neighbor);
                 }
             }
