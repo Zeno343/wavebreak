@@ -12,30 +12,31 @@ use crate::{
     },
     monster_ai::MonsterAi,
     Rect,
+    SCREEN_HEIGHT,
     View,
 };
 
 #[derive(Clone, Copy, PartialEq)]
-pub enum RunState{
+pub enum State{
     Paused,
     Running,
 }
 
-pub struct State<'a> {
+pub struct App<'a> {
     pub world: World,
-    pub run_state: RunState,
+    pub run_state: State,
     pub font: FontCache<'a>,
 }
 
-impl<'a> State<'a> {
+impl<'a> App<'a> {
     pub fn tick(&mut self, view: &mut View) {
-        if self.run_state == RunState::Running {
+        if self.run_state == State::Running {
             reveal_map(&self.world);
 
             let mut monster_ai = MonsterAi { };
             monster_ai.run_now(&self.world);
 
-            self.run_state = RunState::Paused;
+            self.run_state = State::Paused;
         }
 
         let positions = self.world.read_storage::<Position>();
@@ -51,6 +52,8 @@ impl<'a> State<'a> {
             }
         }
 
+        view.draw_text(&mut self.font, "Hello", Color::RGB(255, 255, 255), Color::RGBA(0, 0, 0, 0), (16, SCREEN_HEIGHT as i32 - 32), 16)
+            .expect("Could not render text"); 
         view.present();
     }
 }

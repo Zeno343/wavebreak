@@ -29,9 +29,9 @@ use map::{
 mod monster_ai;
 mod pathfinding;
 
-mod state;
-use state::{
-    RunState,
+mod app;
+use app::{
+    App,
     State,
 };
 
@@ -117,9 +117,9 @@ fn main() -> Result<(), String> {
     let font_manager = FontManager::init(view.canvas())?;
     let input_mono = font_manager.load("assets/InputMono-Regular.ttf")?;
 
-    let mut state = State { 
+    let mut state = App { 
         world: World::new(),
-        run_state: RunState::Running,
+        run_state: State::Running,
         font: input_mono,
     };
     
@@ -184,25 +184,25 @@ fn main() -> Result<(), String> {
 
                 Event::KeyDown { keycode: Some(Keycode::Left), .. } => {
                     if try_move_player(-1, 0, &state.world) {
-                        state.run_state = RunState::Running;
+                        state.run_state = State::Running;
                     }
                 }
 
                 Event::KeyDown { keycode: Some(Keycode::Right), .. } => {
                     if try_move_player(1, 0, &state.world) {
-                        state.run_state = RunState::Running;
+                        state.run_state = State::Running;
                     }
                 }
 
                 Event::KeyDown { keycode: Some(Keycode::Up), .. } => {
                     if try_move_player(0, -1, &state.world) {
-                        state.run_state = RunState::Running;
+                        state.run_state = State::Running;
                     }
                 }
 
                 Event::KeyDown { keycode: Some(Keycode::Down), .. } => {
                     if try_move_player(0, 1, &state.world) {
-                        state.run_state = RunState::Running;
+                        state.run_state = State::Running;
                     }
                 }
 
