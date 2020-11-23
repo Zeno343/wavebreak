@@ -51,10 +51,8 @@ impl<'a> System<'a> for MonsterAi {
 
                 if path.len() > 1 {
                     let next_tile = path.pop().unwrap();
-                    if !map[next_tile].blocked {
-                        *position = Position { x: next_tile.0, y: next_tile.1 };
-                        viewshed.dirty = true;
-                    }
+                    *position = Position { x: next_tile.0, y: next_tile.1 };
+                    viewshed.dirty = true;
                 }
             }
         }

@@ -56,21 +56,37 @@ impl<'a> App<'a> {
             }
         }
 
-        view.draw_text(&mut self.font, "Hello", Color::RGB(255, 255, 255), Color::RGBA(0, 0, 0, 0), (16, SCREEN_HEIGHT as i32 - 32), 16)
-            .expect("Could not render text"); 
+        view.draw_text(
+            &mut self.font, 
+            "Hello", 
+            Color::RGB(255, 255, 255), 
+            Color::RGBA(0, 0, 0, 0), 
+            (16, SCREEN_HEIGHT as i32 - 32), 
+            16
+        ).expect("Could not render text"); 
+
         view.present();
     }
 }
 
-pub fn draw_entity(view: &mut View, font: &mut FontCache, position: &Position, renderable: &Renderable) {
+pub fn draw_entity(
+    view: &mut View, 
+    font: &mut FontCache, 
+    position: &Position, 
+    renderable: &Renderable
+) {
     view.draw_glyph(
         font, 
         renderable.glyph, 
         renderable.color, 
         Color::RGB(0, 0, 0),
-        Rect::new((position.x as u32 * CELL_WIDTH) as i32, (position.y as u32 * CELL_HEIGHT) as i32, CELL_WIDTH, CELL_HEIGHT)
-    )
-        .expect("Could not render entity");
+        Rect::new(
+            (position.x as u32 * CELL_WIDTH) as i32, 
+            (position.y as u32 * CELL_HEIGHT) as i32, 
+            CELL_WIDTH, 
+            CELL_HEIGHT
+        )
+    ).expect("Could not render entity");
 }
 
 pub fn draw_map(view: &mut View, font: &mut FontCache, map: &Map) {
