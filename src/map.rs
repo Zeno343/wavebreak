@@ -16,6 +16,11 @@ use crate::{
     simple_rng::SimpleRng,
 };
 
+use wavebreaker_util::{
+    algorithms::fov::FovNode,
+    data_structures::Graph,
+};
+
 #[derive(PartialEq, Copy, Clone, Debug)]
 pub enum TileType {
     Floor,
@@ -48,6 +53,12 @@ pub struct Tile {
     pub visible: bool,
     pub blocked: bool,
     pub entities: Vec<Entity>
+}
+
+impl FovNode for Tile {
+    fn blocks_view(&self) -> bool {
+        self.tile_type == TileType::Wall
+    }
 }
 
 pub struct Map {
@@ -172,7 +183,10 @@ impl Map {
         }
     }
 
-    pub fn neighbors(&self, tile: (usize, usize)) -> Vec<(usize, usize)> {
+}
+
+impl Graph<(usize, usize), Tile> for Map {
+    fn neighbors(&self, tile: &(usize, usize)) -> Vec<(usize, usize)> {
         let mut neighbors = Vec::new();
         for x in -1..=1 {
             for y in -1..=1 {
@@ -189,7 +203,7 @@ impl Map {
         neighbors
     }
 
-    pub fn cost(&self, start: (usize, usize), end: (usize, usize)) -> usize {
+    fn cost(&self, start: &(usize, usize), end: &(usize, usize)) -> usize {
         let x_distance;
         let y_distance;
         
@@ -206,6 +220,10 @@ impl Map {
         }
         
         ((x_distance as f64 + y_distance as f64).sqrt() * 1_000.0) as usize
+    }
+
+    fn contains(&self, point: &(usize, usize)) -> bool {
+        point.0 < self.width && point.1 < self.height
     }
 }
 

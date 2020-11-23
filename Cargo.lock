@@ -396,6 +396,7 @@ dependencies = [
  "specs",
  "specs-derive",
  "wavebreaker_sdl2",
+ "wavebreaker_util",
 ]
 
 [[package]]
@@ -404,3 +405,7 @@ version = "0.1.0"
 dependencies = [
  "sdl2",
 ]
+
+[[package]]
+name = "wavebreaker_util"
+version = "0.1.0"

@@ -21,9 +21,6 @@ use app::{
 
 mod components;
 use components::*;
-
-mod fov;
-
 mod map;
 use map::{
     Map,
@@ -31,13 +28,9 @@ use map::{
 
 mod map_processing;
 mod monster_ai;
-mod pathfinding;
 
 mod simple_rng;
 use simple_rng::SimpleRng;
-
-mod util;
-use util::Queue;
 
 pub use wavebreaker_sdl2::{
     font::{
@@ -51,6 +44,14 @@ pub use wavebreaker_sdl2::{
         Rect,
         View,
     }
+};
+
+pub use wavebreaker_util::{
+    algorithms::{
+        fov::compute_fov,
+        pathfinding::find_path,
+    },
+    data_structures::Queue,
 };
 
 const LOG_FILE: &str = "log";
@@ -115,7 +116,7 @@ fn try_move_player(d_x: i16, d_y: i16, world: &World) -> bool {
 }
 
 fn main() -> Result<(), String> {
-    let _ = OpenOptions::new().write(true).truncate(true).open(LOG_FILE).expect("Could not open log file");
+    let _ = OpenOptions::new().write(true).create(true).truncate(true).open(LOG_FILE).expect("Could not open log file");
 
     panic::set_hook(Box::new(|panic_info| {
         let mut log = OpenOptions::new().append(true).create(true).open(LOG_FILE).expect("Could not open log file");

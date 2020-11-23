@@ -2,10 +2,16 @@ use specs::prelude::*;
 use crate::{
     log,
     components::*,
-    fov::compute_fov,
+    map::Tile,
     Map, 
-    pathfinding::find_path,
-    util::Queue,
+};
+
+use wavebreaker_util::{
+    algorithms::{
+        fov::compute_fov,
+        pathfinding::find_path,
+    },
+    data_structures::Queue,
 };
 
 pub struct MonsterAi;
@@ -34,7 +40,7 @@ impl<'a> System<'a> for MonsterAi {
             if viewshed.dirty {
                 viewshed.visible_tiles = compute_fov(
                     (position.x, position.y), 
-                    &map, 
+                    &*map, 
                     viewshed.range
                 );
 
@@ -43,10 +49,10 @@ impl<'a> System<'a> for MonsterAi {
 
             if viewshed.visible_tiles.contains(&(player_position.x, player_position.y)) {
                 messages.push(format!("{} hurls insults at you!", name.name));
-                let mut path = find_path(
+                let mut path = find_path::<Tile>(
                     (position.x, position.y), 
                     (player_position.x, player_position.y), 
-                    &map
+                    &*map
                 );
 
                 if path.len() > 1 {

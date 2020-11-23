@@ -5,7 +5,6 @@ use crate::{
     Color,
     components::*,
     FontCache,
-    fov::compute_fov,
     map::{
         Map,
         TileType,
@@ -16,6 +15,8 @@ use crate::{
     SCREEN_HEIGHT,
     View,
 };
+
+use wavebreaker_util::algorithms::fov::compute_fov;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum State{
@@ -152,7 +153,7 @@ fn reveal_map(world: &World) {
 
         viewshed.visible_tiles = compute_fov(
             (position.x, position.y), 
-            &map, 
+            &*map, 
             viewshed.range
         );
 
