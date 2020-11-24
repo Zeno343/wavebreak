@@ -180,7 +180,7 @@ impl Map {
     }
     
     pub fn clear_entities(&mut self) {
-        for mut tile in self.tiles.iter_mut() {
+        for tile in self.tiles.iter_mut() {
             tile.entities.clear();
         }
     }

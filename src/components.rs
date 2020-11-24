@@ -8,14 +8,39 @@ pub struct BlocksTile;
 
 #[derive(Component, Debug)]
 pub struct CombatStats {
-    pub max_hp : i32,
-    pub hp : i32,
-    pub defense : i32,
-    pub power : i32
+    pub max_hp: usize,
+    pub hp: usize,
+    pub defense: usize,
+    pub power: usize 
+}
+
+#[derive(Component)]
+pub struct IncomingDamage {
+    pub damage: Vec<usize>,
+}
+
+impl IncomingDamage {
+    pub fn add_damage(
+        store: &mut WriteStorage<IncomingDamage>,
+        target: Entity,
+        damage: usize
+    ) {
+        if let Some(target) = store.get_mut(target) {
+            target.damage.push(damage);
+        } else {
+            let incoming_damage = IncomingDamage { damage: vec![damage] };
+            store.insert(target, incoming_damage).expect("Couldn't add damage");
+        }
+    }
 }
 
 #[derive(Component)]
 pub struct Monster;
+
+#[derive(Component)]
+pub struct MeleeAttack {
+    pub target: Entity,
+}
 
 #[derive(Component)]
 pub struct Name {

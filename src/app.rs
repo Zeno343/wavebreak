@@ -4,12 +4,14 @@ use crate::{
     CELL_HEIGHT,
     Color,
     components::*,
+    damage::Damage,
     FontCache,
     map::{
         Map,
         TileType,
     },
     map_processing::MapProcessing,
+    melee_combat::MeleeCombat,
     monster_ai::MonsterAi,
     Rect,
     SCREEN_HEIGHT,
@@ -41,6 +43,13 @@ impl<'a> App<'a> {
             let mut map_processing = MapProcessing { };
             map_processing.run_now(&self.world);
 
+            let mut melee_combat = MeleeCombat { };
+            melee_combat.run_now(&self.world);
+
+            let mut damage = Damage { };
+            damage.run_now(&self.world);
+
+            cull_dead(&mut self.world);
             self.run_state = State::Paused;
         }
 
@@ -70,6 +79,20 @@ impl<'a> App<'a> {
     }
 }
 
+fn cull_dead(world: &mut World) {
+    let mut dead : Vec<Entity> = Vec::new();
+    {
+        let combat_stats = world.read_storage::<CombatStats>();
+        let entities = world.entities();
+        for (entity, stats) in (&entities, &combat_stats).join() {
+            if stats.hp < 1 { dead.push(entity); }
+        }
+    }
+
+    for victim in dead {
+        world.delete_entity(victim).expect("Unable to delete");
+    }
+}
 pub fn draw_entity(
     view: &mut View, 
     font: &mut FontCache, 

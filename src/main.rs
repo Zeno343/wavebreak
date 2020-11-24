@@ -21,12 +21,15 @@ use app::{
 
 mod components;
 use components::*;
+
+mod damage;
 mod map;
 use map::{
     Map,
 };
 
 mod map_processing;
+mod melee_combat;
 mod monster_ai;
 
 pub use wavebreaker_sdl2::{
@@ -67,31 +70,25 @@ fn log(message: &str) {
 
 fn try_move_player(d_x: i16, d_y: i16, world: &World) -> bool {
     let mut positions = world.write_storage::<Position>();
+    let entities = world.entities();
     let players = world.write_storage::<Player>();
     let mut viewsheds = world.write_storage::<Viewshed>();
 
     let map = world.fetch::<Map>();
     
-    for (_, pos, viewshed) in (&players, &mut positions, &mut viewsheds).join() {
+    for (entity, _, pos, viewshed) in 
+        (&entities, &players, &mut positions, &mut viewsheds).join() 
+    {
         let dest_x: Option<usize> = (pos.x as i16 + d_x).try_into().ok();
         let dest_y: Option<usize> = (pos.y as i16 + d_y).try_into().ok();
         
-        log(
-            &format!("Player attempting move from {},{} to {},{}", 
-                pos.x, 
-                pos.y, 
-                dest_x.unwrap(), 
-                dest_y.unwrap()
-            )
-        );
-
         if dest_x.is_some() && dest_y.is_some() {
             let dest_x = dest_x.unwrap();
             let dest_y = dest_y.unwrap();
 
             if dest_x < map.width && dest_y < map.height {
-                log(&format!("Player landed on {:?}", map[(dest_x, dest_y)]));
-                if !map[(dest_x, dest_y)].blocked {
+                let tile = &map[(dest_x, dest_y)];
+                if !tile.blocked {
                     //set player's position component
                     pos.x = dest_x;
                     pos.y = dest_y;
@@ -104,8 +101,28 @@ fn try_move_player(d_x: i16, d_y: i16, world: &World) -> bool {
                     viewshed.dirty = true;
 
                     return true;
-                }
+                } else {
+                    let mut moved: bool = false;
 
+                    for potential_target in tile.entities.iter() {
+                        let combat_stats = world.read_storage::<CombatStats>();
+                        let mut melee_attacks = world.write_storage::<MeleeAttack>();
+
+                        match combat_stats.get(*potential_target) {
+                            Some(target) => {
+                                melee_attacks.insert(
+                                    entity, 
+                                    MeleeAttack { target: *potential_target }
+                                ).expect("Could not add attack");
+                                moved = true; 
+                            },
+
+                            None => { },
+                        }
+                    }
+
+                    return moved;
+                }
             }
         }
     }
@@ -139,14 +156,16 @@ fn main() -> Result<(), String> {
 
     let mut rng = SimpleRng::new(timestamp as usize);
 
+    state.world.register::<BlocksTile>();
+    state.world.register::<CombatStats>();
+    state.world.register::<IncomingDamage>();
+    state.world.register::<Monster>();
+    state.world.register::<MeleeAttack>();
+    state.world.register::<Name>();
     state.world.register::<Player>();
     state.world.register::<Position>();
     state.world.register::<Renderable>();
     state.world.register::<Viewshed>();
-    state.world.register::<Monster>();
-    state.world.register::<Name>();
-    state.world.register::<BlocksTile>();
-    state.world.register::<CombatStats>();
     
     let map_width = SCREEN_WIDTH / CELL_WIDTH;
     let map_height = SCREEN_HEIGHT / CELL_HEIGHT;
