@@ -29,9 +29,6 @@ use map::{
 mod map_processing;
 mod monster_ai;
 
-mod simple_rng;
-use simple_rng::SimpleRng;
-
 pub use wavebreaker_sdl2::{
     font::{
         FontCache,
@@ -50,6 +47,7 @@ pub use wavebreaker_util::{
     algorithms::{
         fov::compute_fov,
         pathfinding::find_path,
+        simple_rng::SimpleRng,
     },
     data_structures::Queue,
 };

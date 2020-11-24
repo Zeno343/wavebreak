@@ -13,11 +13,13 @@ use specs::Entity;
 
 use crate::{
     log,
-    simple_rng::SimpleRng,
 };
 
 use wavebreaker_util::{
-    algorithms::fov::FovNode,
+    algorithms::{
+        fov::FovNode,
+        simple_rng::SimpleRng,
+    },
     data_structures::Graph,
 };
 
