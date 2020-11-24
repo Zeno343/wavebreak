@@ -205,7 +205,7 @@ impl Graph<(usize, usize), Tile> for Map {
         neighbors
     }
 
-    fn cost(&self, start: &(usize, usize), end: &(usize, usize)) -> usize {
+    fn cost(&self, start: &(usize, usize), end: &(usize, usize)) -> f64 {
         let x_distance;
         let y_distance;
         
@@ -221,7 +221,7 @@ impl Graph<(usize, usize), Tile> for Map {
             y_distance = end.1 - start.1
         }
         
-        ((x_distance as f64 + y_distance as f64).sqrt() * 1_000.0) as usize
+        (x_distance as f64 + y_distance as f64).sqrt()
     }
 
     fn contains(&self, point: &(usize, usize)) -> bool {
