@@ -63,7 +63,10 @@ const CELL_WIDTH: u32 = 12;
 const CELL_HEIGHT: u32 = 20;
 
 fn log(message: &str) {
-    let mut log = OpenOptions::new().append(true).create(true).open(LOG_FILE).expect("Could not open log file");
+    let mut log = OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(LOG_FILE).expect("Could not open log file");
     log.write_all(message.as_bytes()).expect("could not write to log file");
     log.write(&['\n' as u8]).expect("could not write to log file");
 }
@@ -131,14 +134,30 @@ fn try_move_player(d_x: i16, d_y: i16, world: &World) -> bool {
 }
 
 fn main() -> Result<(), String> {
-    let _ = OpenOptions::new().write(true).create(true).truncate(true).open(LOG_FILE).expect("Could not open log file");
+    let _ = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(LOG_FILE)
+        .expect("Could not open log file");
 
     panic::set_hook(Box::new(|panic_info| {
-        let mut log = OpenOptions::new().append(true).create(true).open(LOG_FILE).expect("Could not open log file");
-        log.write_all(format!("panic occurred: {:?}", panic_info).as_bytes()).expect("Error writing to log file");
+        let mut log = OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(LOG_FILE)
+            .expect("Could not open log file");
+        log.write_all(
+            format!("panic occurred: {:?}", panic_info)
+            .as_bytes()
+        ).expect("Error writing to log file");
     }));
 
-    let mut view = View::init("Wavebreaker", SCREEN_WIDTH, SCREEN_HEIGHT).expect("Could not initialize view"); 
+    let mut view = View::init("Wavebreaker", 
+        SCREEN_WIDTH, 
+        SCREEN_HEIGHT
+    ).expect("Could not initialize view"); 
+
     let font_manager = FontManager::init(view.canvas())?;
     let input_mono = font_manager.load("assets/InputMono-Regular.ttf")?;
 
